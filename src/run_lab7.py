@@ -1,19 +1,17 @@
+import json
 
 from database import check_connection, fetch_parcels_by_land_use
 from spatial import Parcel
+from exchange import build_feature_collection, validate_feature_collection
 
-# Step 1: Check database connection
 if check_connection():
 
-    # Step 2: Retrieve Residential parcels
+    # Retrieve Residential parcels
     rows = fetch_parcels_by_land_use("Residential")
 
     print("Rows returned:", len(rows))
 
-    if rows:
-        print("First database row:", rows[0])
-
-    # Step 3: Convert database rows into Parcel objects
+    # Convert database rows to Parcel objects
     parcels = [
         Parcel.from_row(row)
         for row in rows
@@ -21,10 +19,26 @@ if check_connection():
 
     print("Parcel objects created:", len(parcels))
 
-    if parcels:
-        first = parcels[0]
+    # Build GeoJSON FeatureCollection
+    collection = build_feature_collection(parcels)
+
+    print("GeoJSON type:", collection["type"])
+    print("Feature count:", len(collection["features"]))
+
+    if collection["features"]:
         print(
-            "First Parcel object:",
-            first.parcel_id,
-            first.land_use,
+            "First feature:",
+            json.dumps(
+                collection["features"][0],
+                indent=2,
+            ),
         )
+
+    # Validate GeoJSON
+    try:
+        validate_feature_collection(collection)
+        print("GeoJSON contract check: PASSED")
+
+    except ValueError as error:
+        print("GeoJSON contract check: FAILED")
+        print(error)
